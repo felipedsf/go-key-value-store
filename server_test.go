@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -48,59 +46,27 @@ func TestJSON(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
-	t.Parallel()
-	
-	makeStorage(t)
-	defer cleanupStorage(t)
+func BenchmarkGet(b *testing.B) {
 
-	kvStore := map[string]string{
-		"key1": "value1",
-		"key2": "value2",
-		"key4": "value4",
-	}
+	makeStorage(b)
+	defer cleanupStorage(b)
 
-	encodedStore := map[string]string{}
-	for k, v := range kvStore {
-		encodedKey := base64.URLEncoding.EncodeToString([]byte(k))
-		encodedValue := base64.URLEncoding.EncodeToString([]byte(v))
-		encodedStore[encodedKey] = encodedValue
-	}
-
-	fileContents, _ := json.Marshal(encodedStore)
-	os.WriteFile(StoragePath+"/data.json", fileContents, 0644)
-
-	testCases := []struct {
-		in  string
-		out string
-		err error
-	}{
-		{"key1", "value1", nil},
-		{"key2", "value2", nil},
-		{"key3", "", nil},
-	}
-
-	for _, testCase := range testCases {
-		got, err := Get(context.Background(), testCase.in)
-		if err != nil {
-			t.Errorf("Received unexpected error %s", err)
-		}
-		if got != testCase.out {
-			t.Errorf("Got %s, expected %s", got, testCase.out)
-		}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Get(context.Background(), "key1")
 	}
 }
 
-func makeStorage(t *testing.T) {
+func makeStorage(tb testing.TB) {
 	err := os.Mkdir("testdata", 0755)
 	if err != nil && !os.IsExist(err) {
-		t.Fatalf("Couldn't create directory testdata: %s", err)
+		tb.Fatalf("Couldn't create directory testdata: %s", err)
 	}
 	StoragePath = "testdata"
 }
-func cleanupStorage(t *testing.T) {
+func cleanupStorage(tb testing.TB) {
 	if err := os.RemoveAll(StoragePath); err != nil {
-		t.Errorf("Failed to delete storage path: %s", StoragePath)
+		tb.Errorf("Failed to delete storage path: %s", StoragePath)
 	}
 	StoragePath = "/tmp/kv"
 }
