@@ -57,6 +57,37 @@ func BenchmarkGet(b *testing.B) {
 	}
 }
 
+func TestGetSetDelete(t *testing.T) {
+	makeStorage(t)
+	defer cleanupStorage(t)
+
+	ctx := context.Background()
+
+	key := "key"
+	value := "value"
+
+	if out, err := Get(ctx, key); err != nil {
+		t.Fatalf("First Get returned unexpected result, out: %s", out)
+	}
+
+	if err := Set(ctx, key, value); err != nil {
+		t.Fatalf("Set returned unexpected error %s", err)
+	}
+
+	if out, err := Get(ctx, key); err != nil || out != value {
+		t.Fatalf("Secound Get returned unexpected result, out: %q, error: %s", out, err)
+	}
+
+	if err := Delete(ctx, key); err != nil {
+		t.Fatalf("Delete returned unexpected error: %s", err)
+	}
+
+	if out, err := Get(ctx, key); err != nil {
+		t.Fatalf("Third Get returned unexpected result, out: %s", out)
+	}
+
+}
+
 func makeStorage(tb testing.TB) {
 	err := os.Mkdir("testdata", 0755)
 	if err != nil && !os.IsExist(err) {
